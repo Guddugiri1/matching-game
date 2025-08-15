@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Team Connect - Memory Match Ice Breaker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #161f36;
+        --cardAccent: #27345a;
+        --primary: #7c5cff;
+        --primary2: #19d2ff;
+        --success: #22c55e;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+      }
+      body {
+        background: radial-gradient(
+            1200px 600px at 85% -10%,
+            rgba(124, 92, 255, 0.25),
+            transparent
+          ),
+          radial-gradient(
+            1000px 500px at -10% 15%,
+            rgba(25, 210, 255, 0.25),
+            transparent
+          ),
+          var(--bg);
+      }
+      /* Soft neo shadow */
+      .soft {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      }
+      /* Card flip */
+      .scene {
+        perspective: 1000px;
+      }
+      .card {
+        transform-style: preserve-3d;
+        transition: transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1);
+      }
+      .flipped {
+        transform: rotateY(180deg);
+      }
+      .card-face {
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      .card-back {
+        transform: rotateY(180deg);
+      }
+      /* Glow on match */
+      .matched {
+        animation: glow 900ms ease-out 2;
+      }
+      @keyframes glow {
+        0% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+        40% {
+          box-shadow: 0 0 20px 6px rgba(34, 197, 94, 0.5);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+      }
+      /* Badge gradient */
+      .badge {
+        background: linear-gradient(
+          135deg,
+          rgba(124, 92, 255, 0.15),
+          rgba(25, 210, 255, 0.15)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      /* Button shine */
+      .btn-shine {
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-shine::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -120%;
+        width: 120%;
+        height: 100%;
+        background: linear-gradient(
+          75deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.15) 50%,
+          transparent 100%
+        );
+        transform: skewX(-20deg);
+        transition: left 0.6s ease;
+      }
+      .btn-shine:hover::after {
+        left: 120%;
+      }
+      /* Tooltip */
+      .tooltip {
+        position: relative;
+      }
+      .tooltip:hover .tooltip-panel {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+      .tooltip-panel {
+        transition: all 0.2s ease;
+        opacity: 0;
+        transform: translateY(6px);
+        pointer-events: none;
+      }
+      /* Pulse ping */
+      .ping {
+        position: relative;
+      }
+      .ping::after {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 12px;
+        border: 2px solid rgba(124, 92, 255, 0.35);
+        animation: pulse 1.4s ease-out infinite;
+      }
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(1.2);
+        }
+      }
+      /* Responsive grid tweaks */
+      @media (min-width: 1024px) {
+        .grid-board {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+      }
+      @media (min-width: 640px) and (max-width: 1023px) {
+        .grid-board {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 639px) {
+        .grid-board {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body class="text-slate-100 antialiased">
+    <div class="max-w-6xl mx-auto px-4 py-8 lg:py-10">
+      <!-- Header -->
+      <header
+        class="flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-8 mb-8"
+      >
+        <div class="flex-1">
+          <div
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full badge text-sm text-sky-200"
+          >
+            <span>🎉</span>
+            <span>Meeting Ice Breaker</span>
+          </div>
+          <h1 class="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight">
+            Team Connect — Memory Match
+          </h1>
+          <p class="mt-2 text-slate-300 max-w-2xl">
+            Flip two cards to find matching pairs. After each match, you’ll get
+            a conversation-starter to spark friendly chat.
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            id="btnNewGame"
+            class="btn-shine px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-400 hover:to-sky-400 text-white font-medium shadow-lg shadow-indigo-800/20"
+          >
+            🔁 New game
+          </button>
+          <div class="tooltip">
+            <button
+              id="btnHowTo"
+              class="px-4 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-100 font-medium soft"
+            >
+              ❔ How to play
+            </button>
+            <div
+              class="tooltip-panel absolute right-0 mt-2 w-64 p-3 rounded-xl bg-slate-900/95 border border-white/10 text-sm shadow-xl"
+            >
+              Flip two cards to find a pair. Match all pairs to win! After each
+              match, discuss the question that pops up.
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Controls -->
+      <section class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div
+          class="rounded-xl soft bg-slate-900/60 p-4 flex items-center justify-between"
+        >
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400">
+              Moves
+            </div>
+            <div id="statMoves" class="text-2xl font-semibold mt-1">0</div>
+          </div>
+          <div class="text-slate-300">🖱️</div>
+        </div>
+        <div
+          class="rounded-xl soft bg-slate-900/60 p-4 flex items-center justify-between"
+        >
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400">
+              Matches
+            </div>
+            <div class="flex items-baseline gap-2 mt-1">
+              <div id="statMatches" class="text-2xl font-semibold">0</div>
+              <div class="text-slate-400 text-sm">/ 6</div>
+            </div>
+          </div>
+          <div class="text-slate-300">✅</div>
+        </div>
+        <div
+          class="rounded-xl soft bg-slate-900/60 p-4 flex items-center justify-between"
+        >
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400">
+              Time
+            </div>
+            <div id="statTime" class="text-2xl font-semibold mt-1">00:00</div>
+          </div>
+          <div class="text-slate-300">⏱️</div>
+        </div>
+        <div
+          class="rounded-xl soft bg-slate-900/60 p-4 flex items-center justify-between"
+        >
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400">
+              Difficulty
+            </div>
+            <select
+              id="selectDifficulty"
+              class="mt-1 bg-slate-800/70 text-slate-100 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="easy">Easy • 6 pairs</option>
+              <option value="medium">Medium • 8 pairs</option>
+              <option value="hard">Hard • 10 pairs</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input
+                id="toggleTimer"
+                type="checkbox"
+                class="w-4 h-4 accent-indigo-500"
+              />
+              Timer
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Board -->
+      <section class="rounded-2xl soft bg-slate-900/50 p-4 sm:p-6 lg:p-8">
+        <div id="board" class="grid grid-board gap-3 sm:gap-4"></div>
+        <p id="helperText" class="text-center text-slate-300 mt-4">
+          Tip: Try saying your guess out loud before flipping the second card!
+        </p>
+      </section>
+
+      <!-- Prompt panel -->
+      <section class="mt-6">
+        <div
+          class="rounded-2xl soft bg-gradient-to-br from-indigo-950/70 via-slate-900/70 to-sky-950/70 border border-white/10 p-5"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <div
+                class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full badge text-xs text-indigo-200 ping"
+              >
+                💬 Conversation Starter
+              </div>
+              <h2 class="mt-2 text-xl font-semibold">
+                Discuss this after your next match
+              </h2>
+              <p id="questionText" class="mt-2 text-slate-200">
+                Make a match to reveal a prompt!
+              </p>
+            </div>
+            <button
+              id="btnNextQuestion"
+              class="btn-shine shrink-0 px-4 py-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 text-slate-100 font-medium soft"
+            >
+              🔀 New prompt
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="mt-8 text-center text-slate-400 text-sm">
+        Made with fun by Canva Code — brighten your standups and kickoffs!
+      </footer>
+    </div>
+
+    <!-- Win Modal -->
+    <div
+      id="winModal"
+      class="fixed inset-0 hidden items-center justify-center p-4 z-50"
+    >
+      <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+      <div
+        class="relative w-full max-w-md rounded-2xl soft bg-slate-900 border border-white/10 p-6"
+      >
+        <div class="flex items-center gap-3">
+          <div class="text-3xl">🏆</div>
+          <div>
+            <h3 class="text-xl font-semibold">You matched them all!</h3>
+            <p class="text-slate-300">Great teamwork. Fancy another round?</p>
+          </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <button
+            id="btnPlayAgain"
+            class="btn-shine px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-400 hover:to-sky-400 text-white font-medium"
+          >
+            🔁 Play again
+          </button>
+          <button
+            id="btnShareWin"
+            class="px-4 py-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 text-slate-100 font-medium"
+          >
+            📣 Share result
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- Game Data ---
+      const BASE_EMOJIS = [
+        "😀",
+        "🚀",
+        "🌟",
+        "📚",
+        "☕",
+        "🎧",
+        "🧠",
+        "💡",
+        "🗓️",
+        "🧩",
+        "🍕",
+        "🌈",
+        "✨",
+        "📝",
+        "🧃",
+        "💬",
+        "🎯",
+        "🕹️",
+        "📌",
+        "🧭",
+      ];
+
+      // 10 conversation starters from the prompt brief (mix of themes)
+      const BASE_QUESTIONS = [
+        "What emoji best describes your morning?",
+        "What’s a work skill you’re proud of developing?",
+        "What’s a small win you had recently?",
+        "If today had a soundtrack, what song would lead?",
+        "Which teammate superpower would you borrow for a day?",
+        "What’s your go-to focus ritual before deep work?",
+        "Share a favorite productivity tip that actually works.",
+        "What’s a hobby you’ve picked up (or want to) this year?",
+        "What helps you feel most supported by a team?",
+        "What’s one thing you’re excited to learn next?",
+      ];
+
+      // --- State ---
+      let deck = []; // array of {id, value, matched}
+      let firstPick = null; // index
+      let secondPick = null; // index
+      let lockBoard = false;
+      let moves = 0;
+      let matches = 0;
+      let totalPairs = 6; // default Easy
+      let timerEnabled = false;
+      let timerInterval = null;
+      let elapsed = 0; // seconds
+      let questionQueue = []; // shuffled questions
+
+      // --- Elements ---
+      const boardEl = document.getElementById("board");
+      const statMovesEl = document.getElementById("statMoves");
+      const statMatchesEl = document.getElementById("statMatches");
+      const statTimeEl = document.getElementById("statTime");
+      const selectDifficultyEl = document.getElementById("selectDifficulty");
+      const toggleTimerEl = document.getElementById("toggleTimer");
+      const helperTextEl = document.getElementById("helperText");
+      const questionTextEl = document.getElementById("questionText");
+      const btnNextQuestionEl = document.getElementById("btnNextQuestion");
+      const btnNewGameEl = document.getElementById("btnNewGame");
+      const winModalEl = document.getElementById("winModal");
+      const btnPlayAgainEl = document.getElementById("btnPlayAgain");
+      const btnShareWinEl = document.getElementById("btnShareWin");
+
+      // --- Helpers ---
+      const pad = (n) => String(n).padStart(2, "0");
+      function formatTime(s) {
+        const m = Math.floor(s / 60),
+          r = s % 60;
+        return `${pad(m)}:${pad(r)}`;
+      }
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+      function pickEmojis(pairs) {
+        const pool = [...BASE_EMOJIS];
+        shuffle(pool);
+        return pool.slice(0, pairs);
+      }
+      function buildDeck(pairs) {
+        const picks = pickEmojis(pairs);
+        const cards = [];
+        let id = 0;
+        picks.forEach((val) => {
+          cards.push({ id: id++, value: val, matched: false });
+          cards.push({ id: id++, value: val, matched: false });
+        });
+        return shuffle(cards);
+      }
+      function startTimer() {
+        stopTimer();
+        elapsed = 0;
+        statTimeEl.textContent = formatTime(elapsed);
+        if (!timerEnabled) return;
+        timerInterval = setInterval(() => {
+          elapsed++;
+          statTimeEl.textContent = formatTime(elapsed);
+        }, 1000);
+      }
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+      function resetQuestions() {
+        questionQueue = shuffle([...BASE_QUESTIONS]);
+      }
+      function nextQuestion() {
+        if (questionQueue.length === 0) resetQuestions();
+        const q = questionQueue.shift();
+        questionTextEl.textContent = q;
+      }
+
+      // --- Rendering ---
+      function renderBoard() {
+        boardEl.innerHTML = "";
+        deck.forEach((card, idx) => {
+          const cardWrap = document.createElement("button");
+          cardWrap.className =
+            "scene w-full aspect-square rounded-xl soft bg-slate-950/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+          cardWrap.setAttribute("data-index", idx);
+
+          const inner = document.createElement("div");
+          inner.className = "card w-full h-full rounded-xl";
+
+          // front
+          const front = document.createElement("div");
+          front.className =
+            "card-face absolute inset-0 rounded-xl flex items-center justify-center text-4xl sm:text-5xl bg-gradient-to-br from-slate-800/80 to-slate-900/80";
+          front.innerHTML = "<span>❓</span>";
+
+          // back
+          const back = document.createElement("div");
+          back.className =
+            "card-face card-back absolute inset-0 rounded-xl flex items-center justify-center text-4xl sm:text-5xl bg-gradient-to-br from-indigo-900/40 to-sky-900/40";
+          const badge = document.createElement("div");
+          badge.className =
+            "absolute top-2 right-2 px-2 py-1 text-xs rounded-md bg-slate-900/60 border border-white/10 text-slate-300";
+          badge.textContent = "Team Connect";
+          const emoji = document.createElement("div");
+          emoji.textContent = card.value;
+
+          back.appendChild(badge);
+          back.appendChild(emoji);
+
+          inner.appendChild(front);
+          inner.appendChild(back);
+
+          // state classes
+          if (card.matched) {
+            cardWrap.classList.add("matched");
+            inner.classList.add("flipped");
+          }
+          cardWrap.appendChild(inner);
+          boardEl.appendChild(cardWrap);
+        });
+      }
+
+      function updateStats() {
+        statMovesEl.textContent = moves;
+        statMatchesEl.textContent = matches;
+        helperTextEl.textContent = lockBoard
+          ? "Checking..."
+          : "Tip: Try saying your guess out loud before flipping the second card!";
+      }
+
+      // --- Game Flow ---
+      function initGame() {
+        // Read UI options
+        const diff = selectDifficultyEl.value;
+        totalPairs = diff === "easy" ? 6 : diff === "medium" ? 8 : 10;
+        statMatchesEl.nextElementSibling.textContent = `/ ${totalPairs}`;
+        timerEnabled = toggleTimerEl.checked;
+
+        // Reset state
+        deck = buildDeck(totalPairs);
+        firstPick = null;
+        secondPick = null;
+        lockBoard = false;
+        moves = 0;
+        matches = 0;
+        resetQuestions();
+        questionTextEl.textContent = "Make a match to reveal a prompt!";
+
+        // Render and start timer
+        renderBoard();
+        updateStats();
+        startTimer();
+
+        // Bind listeners after render
+        Array.from(boardEl.children).forEach((btn) => {
+          btn.addEventListener("click", onCardClick);
+        });
+      }
+
+      function onCardClick(e) {
+        if (lockBoard) return;
+
+        const btn = e.currentTarget;
+        const idx = parseInt(btn.getAttribute("data-index"));
+        const card = deck[idx];
+        if (card.matched) return;
+
+        const inner = btn.querySelector(".card");
+        // prevent clicking the same shown card
+        if (firstPick === idx) return;
+
+        inner.classList.add("flipped");
+
+        if (firstPick === null) {
+          firstPick = idx;
+          return;
+        }
+
+        // Second pick
+        secondPick = idx;
+        moves++;
+        updateStats();
+        lockBoard = true;
+
+        const firstCard = deck[firstPick];
+        const secondCard = deck[secondPick];
+
+        if (firstCard.value === secondCard.value) {
+          // Match
+          setTimeout(() => {
+            firstCard.matched = true;
+            secondCard.matched = true;
+            matches++;
+            updateStats();
+            lockBoard = false;
+            // Reveal a question on each successful match
+            nextQuestion();
+
+            // Win?
+            if (matches === totalPairs) {
+              stopTimer();
+              openWinModal();
+            }
+
+            // add matched animation outline state
+            const firstBtn = boardEl.children[firstPick];
+            const secondBtn = boardEl.children[secondPick];
+            firstBtn.classList.add("matched");
+            secondBtn.classList.add("matched");
+
+            resetTurn();
+          }, 600);
+        } else {
+          // Not a match
+          setTimeout(() => {
+            // flip both back
+            const firstBtn = boardEl.children[firstPick].querySelector(".card");
+            const secondBtn =
+              boardEl.children[secondPick].querySelector(".card");
+            firstBtn.classList.remove("flipped");
+            secondBtn.classList.remove("flipped");
+            resetTurn();
+            lockBoard = false;
+          }, 900);
+        }
+      }
+
+      function resetTurn() {
+        firstPick = null;
+        secondPick = null;
+      }
+
+      function openWinModal() {
+        winModalEl.classList.remove("hidden");
+        winModalEl.classList.add("flex");
+      }
+      function closeWinModal() {
+        winModalEl.classList.add("hidden");
+        winModalEl.classList.remove("flex");
+      }
+
+      // --- Share handler (copies summary) ---
+      function shareResult() {
+        const text = `Team Connect — I matched ${totalPairs} pairs in ${formatTime(
+          elapsed
+        )} with ${moves} moves! 💫`;
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              btnShareWinEl.textContent = "✅ Copied!";
+              setTimeout(
+                () => (btnShareWinEl.textContent = "📣 Share result"),
+                1500
+              );
+            })
+            .catch(() => {
+              alert(text);
+            });
+        } else {
+          alert(text);
+        }
+      }
+
+      // --- Controls wiring ---
+      selectDifficultyEl.addEventListener("change", initGame);
+      toggleTimerEl.addEventListener("change", () => {
+        timerEnabled = toggleTimerEl.checked;
+        if (timerEnabled) {
+          startTimer();
+        } else {
+          stopTimer();
+          statTimeEl.textContent = "⏸️";
+        }
+      });
+      btnNewGameEl.addEventListener("click", initGame);
+      btnNextQuestionEl.addEventListener("click", nextQuestion);
+      btnPlayAgainEl.addEventListener("click", () => {
+        closeWinModal();
+        initGame();
+      });
+      btnShareWinEl.addEventListener("click", shareResult);
+      winModalEl.addEventListener("click", (e) => {
+        if (e.target === winModalEl) closeWinModal();
+      });
+
+      // --- Start default game ---
+      window.addEventListener("load", () => {
+        // set defaults per request: Easy with 6 pairs, timer off
+        selectDifficultyEl.value = "easy";
+        toggleTimerEl.checked = false;
+        initGame();
+      });
+    </script>
+    <script>
+      (function () {
+        function c() {
+          var b = a.contentDocument || a.contentWindow.document;
+          if (b) {
+            var d = b.createElement("script");
+            d.innerHTML =
+              "window.__CF$cv$params={r:'96f63f2391c8553e',t:'MTc1NTIzNTI2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+            b.getElementsByTagName("head")[0].appendChild(d);
+          }
+        }
+        if (document.body) {
+          var a = document.createElement("iframe");
+          a.height = 1;
+          a.width = 1;
+          a.style.position = "absolute";
+          a.style.top = 0;
+          a.style.left = 0;
+          a.style.border = "none";
+          a.style.visibility = "hidden";
+          document.body.appendChild(a);
+          if ("loading" !== document.readyState) c();
+          else if (window.addEventListener)
+            document.addEventListener("DOMContentLoaded", c);
+          else {
+            var e = document.onreadystatechange || function () {};
+            document.onreadystatechange = function (b) {
+              e(b);
+              "loading" !== document.readyState &&
+                ((document.onreadystatechange = e), c());
+            };
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
